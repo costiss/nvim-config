@@ -43,6 +43,7 @@ return {
 					},
 				},
 				renderer = {
+					group_empty = true,
 					root_folder_label = false,
 					highlight_git = true,
 					highlight_opened_files = "none",
