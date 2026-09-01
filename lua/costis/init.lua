@@ -1,5 +1,6 @@
 require("costis.remap")
 require("costis.set")
+require("costis.review").setup()
 
 vim.keymap.set("n", "<leader>c", function()
 	vim.api.nvim_feedkeys("gcc", "x", true)
