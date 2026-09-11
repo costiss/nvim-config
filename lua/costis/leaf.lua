@@ -1,10 +1,10 @@
 --- Markdown preview through `leaf`, a terminal previewer.
 ---
---- Opening a markdown file swaps the window over to the rendered document, so
---- that is what you land on. The render is plain buffer text with no process
---- behind it: leaf's own keybindings never apply and every neovim mapping
---- works as usual. <leader>mp (or q) hands the window back to the source
---- buffer, which then stays editable until you ask for the preview again.
+--- Previews are always explicit: no markdown file is opened in leaf until you
+--- ask for it. The render is plain buffer text with no process behind it:
+--- leaf's own keybindings never apply and every neovim mapping works as usual.
+--- <leader>mp (or q) hands the window back to the source buffer, which then
+--- stays editable until you ask for the preview again.
 ---
 ---   :Leaf [file]      preview <file> in place (default: the current buffer)
 ---   :LeafSplit [f]    preview side by side, without taking focus
@@ -12,7 +12,6 @@
 ---   :LeafEdit         go back to the source buffer
 ---   :LeafPicker       browse files in leaf's own picker (interactive TUI)
 ---   :LeafFuzzy [kw]   fuzzy-find a file in leaf's own picker
----   :LeafAuto         toggle the open-markdown-in-leaf behaviour
 ---
 --- In markdown buffers:
 ---   <leader>mp   toggle the preview in place
@@ -28,7 +27,6 @@ local MIN_WIDTH = 20
 
 M.config = {
 	theme = "ocean",
-	auto = true,
 	position = "right",
 	width = 0.5,
 }
@@ -186,7 +184,6 @@ function M.edit(win)
 	if vim.api.nvim_win_is_valid(win) then
 		apply_wo(win, entry.saved_wo)
 		if entry.src and vim.api.nvim_buf_is_valid(entry.src) then
-			vim.b[entry.src].leaf_edit = true
 			vim.api.nvim_win_set_buf(win, entry.src)
 			vim.api.nvim_set_current_win(win)
 		end
@@ -302,46 +299,6 @@ function M.fuzzy(keyword, float)
 	tui(args, float)
 end
 
-------------------------------------------------------------------------- auto
-
---- Every reason not to hijack a window. Reviews, diffs, floats, special
---- windows and buffers the user chose to edit are all left alone.
-local function should_open(buf, win)
-	if not M.config.auto or vim.g.leaf_auto == false then
-		return false
-	end
-	if vim.b[buf].leaf_edit or vim.bo[buf].buftype ~= "" or vim.bo[buf].filetype ~= "markdown" then
-		return false
-	end
-	if vim.bo[buf].modified or not vim.bo[buf].modifiable then
-		return false
-	end
-	if vim.fn.filereadable(vim.api.nvim_buf_get_name(buf)) == 0 then
-		return false
-	end
-	if not vim.api.nvim_win_is_valid(win) or vim.api.nvim_win_get_buf(win) ~= buf then
-		return false
-	end
-	if vim.api.nvim_win_get_config(win).relative ~= "" or vim.fn.win_gettype(win) ~= "" then
-		return false
-	end
-	if vim.wo[win].diff or previews[win] then
-		return false
-	end
-
-	local ok, review = pcall(require, "costis.review")
-	if ok and review.is_active and review.is_active() then
-		return false
-	end
-
-	return vim.fn.executable(BIN) == 1
-end
-
-function M.toggle_auto()
-	M.config.auto = not M.config.auto
-	vim.notify("leaf: auto preview " .. (M.config.auto and "enabled" or "disabled"))
-end
-
 ------------------------------------------------------------------------ setup
 
 function M.setup()
@@ -373,10 +330,6 @@ function M.setup()
 		M.fuzzy(o.args, o.bang)
 	end, { nargs = "?", bang = true, desc = "Fuzzy-find a file to preview in leaf" })
 
-	cmd("LeafAuto", function()
-		M.toggle_auto()
-	end, { desc = "Toggle opening markdown files in leaf" })
-
 	vim.api.nvim_create_autocmd("FileType", {
 		group = augroup,
 		pattern = { "markdown", "codecompanion" },
@@ -388,19 +341,6 @@ function M.setup()
 			vim.keymap.set("n", "<leader>mv", function()
 				M.split()
 			end, { buffer = args.buf, desc = "Leaf: preview side by side" })
-		end,
-	})
-
-	vim.api.nvim_create_autocmd("BufWinEnter", {
-		group = augroup,
-		pattern = { "*.md", "*.markdown" },
-		callback = function(args)
-			local win = vim.api.nvim_get_current_win()
-			vim.schedule(function()
-				if should_open(args.buf, win) then
-					show(win, args.buf, vim.api.nvim_buf_get_name(args.buf))
-				end
-			end)
 		end,
 	})
 
