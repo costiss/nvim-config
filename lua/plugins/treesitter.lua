@@ -7,6 +7,7 @@ return {
 		main = "nvim-treesitter.configs", -- The "s" works perfectly here
 		opts = {
 			auto_install = true,
+			ensure_installed = { "markdown", "markdown_inline" },
 			highlight = {
 				enable = true,
 				additional_vim_regex_highlighting = false,
