@@ -306,6 +306,10 @@ end
 
 -------------------------------------------------------------------------- api
 
+function M.is_active()
+	return state.active
+end
+
 function M.goto_file(idx)
 	if not state.active or #state.files == 0 then
 		return
